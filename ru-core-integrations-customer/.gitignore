@@ -1,0 +1,9 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/Functions/.vs/** */
+Deployment/Infrastructure/FunctionApp/servicebus-setup-module.json
+LogicApp/logic_app_workspace/customer_integration_orchestration_logic_app/parameters.json
+.vs/VSWorkspaceState.json
+.vs/**

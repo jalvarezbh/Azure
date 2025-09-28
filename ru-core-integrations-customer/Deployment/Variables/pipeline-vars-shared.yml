@@ -1,0 +1,20 @@
+# IaC variables
+
+variables:
+  - name: projectName
+    value: 'integrations-product'
+
+#   # API Connections - if you change this name, you must change the reference in workflow.json
+#   #blobConnectionName: 'azureblob'
+  - name: commondataserviceName
+    value: 'commondataservice'
+
+  - name: serviceBusName
+    value: 'servicebus'
+
+  - name: keyvaultName
+    value: 'keyvault'
+
+  # Project artifacts
+  - name: logicAppCIArtifactName
+    value: 'logicapp_publish_artifact'

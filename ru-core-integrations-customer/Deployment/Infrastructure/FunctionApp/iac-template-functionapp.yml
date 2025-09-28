@@ -1,0 +1,52 @@
+parameters:
+- name: serviceConnection
+  type: string
+- name: devopsEnvironment
+  type: string
+
+jobs:
+- deployment: deploy_iac
+  displayName: Deploy IAC
+  environment: ${{ parameters.devopsEnvironment }}
+  
+  strategy:
+    runOnce:
+     deploy:
+       steps:
+        - download: current
+          artifact: $(artifactName)
+
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: ${{ parameters.serviceConnection}}
+            scriptType: 'bash'
+            scriptLocation: 'inlineScript'
+            inlineScript: |
+              az group list
+            addSpnToEnvironment: true
+            useGlobalConfig: true
+
+        - task: AzureResourceGroupDeployment@3
+          displayName: 'Deploy Function App'
+          inputs:
+            #azureSubscription: ${{ parameters.serviceConnection}}
+            azureResourceManagerConnection: ${{ parameters.serviceConnection}}
+            resourceGroupName: $(resourceGroupName)
+            location: $(resourceGroupLocation)
+            csmFile: '$(Pipeline.Workspace)/$(artifactName)/Infrastructure/FunctionApp/iac-functionapp.bicep'
+            overrideParameters: '
+              -appServicePlanName $(faAppServicePlanName)
+              -sharedResourceGroup $(sharedResourceGroup)
+              -appInsightsName $(appInsightsName)
+              -localKeyVaultName $(localKeyVaultName)
+              -functionApp_name $(functionAppName)
+              -serviceBusName $(serviceBusName)
+              -serviceBusQueueName $(serviceBusQueueName)
+              -customStorageName $(customStorageName)
+              -inboundCustomerTableName $(inboundCustomerTableName)
+              -tokenValidationAuthority $(tokenValidationAuthority)
+              -tokenValidationAudience $(tokenValidationAudience)
+              -userAssignedManagedIdentityName $(userAssignedManagedIdentityName)
+              -dataverseConfigurationEnvironmentUrl $(dataverseConfigurationEnvironmentUrl)'
+            deploymentMode: $(deploymentMode)
+            deploymentOutputs: 'LogicAppArmOutputs'

@@ -1,0 +1,17 @@
+{
+  "folders": [
+    {
+      "name": "customer_integration_orchestration_logic_app",
+      "path": "./customer_integration_orchestration_logic_app"
+    }
+  ],
+  "settings": {
+    "terminal.integrated.env.windows": {
+      "PATH": "C:\\Users\\Usuario\\.azurelogicapps\\dependencies\\DotNetSDK;${env:PATH}"
+    },
+    "omnisharp.dotNetCliPaths": [
+      "C:\\Users\\Usuario\\.azurelogicapps\\dependencies\\DotNetSDK"
+    ],
+    "azurite.location": ""
+  }
+}

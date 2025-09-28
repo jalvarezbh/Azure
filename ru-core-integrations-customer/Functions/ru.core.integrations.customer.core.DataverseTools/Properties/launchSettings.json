@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "ru.core.integrations.customer.core.DataverseTools": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "pac_path2": "C:\\Users\\lilkar\\AppData\\Local\\Microsoft\\PowerAppsCLI\\pac.cmd"
+      }
+    }
+  }
+}

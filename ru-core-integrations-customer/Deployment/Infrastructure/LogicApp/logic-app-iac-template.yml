@@ -1,0 +1,160 @@
+# IaC Logic App resources deployment template
+
+parameters:
+- name: environment
+  type: string
+- name: serviceConnection
+  type: string
+
+jobs:
+- deployment: deploy_logicapp_resources
+  displayName: Deploy Logic App Resources
+  pool:
+    vmImage: ubuntu-latest
+  environment: ${{ parameters.environment }}
+  variables:
+    deploymentMode: 'Incremental'
+  strategy:
+    runOnce:
+      deploy:
+        steps:
+        - download: current
+          artifact: $(artifactName)
+
+        - task: AzureResourceGroupDeployment@3
+          name: AzureDeploy
+          displayName: 'Create Logic App'
+          inputs:
+            azureResourceManagerConnection: ${{ parameters.serviceConnection }}
+            resourceGroupName: $(resourceGroupName)
+            action: 'Create Or Update Resource Group'
+            location: $(resourceGroupLocation)
+            csmFile: '$(Pipeline.Workspace)/$(artifactName)/Infrastructure/LogicApp/logicapp-resources.bicep'
+            overrideParameters: '
+              -location $(resourceGroupLocation)
+              -environmentName ${{ parameters.environment }}
+              -projectName $(projectName)
+              -appInsightsName $(appInsightsName)
+              -logicAppName $(logicAppName)
+              -appServicePlanName $(laAppServicePlanName)
+              -sharedResourceGroup $(sharedResourceGroup)
+              -localKeyVaultName $(localKeyVaultName)              
+              -dataverseObjectId $(dataverseObjectId)
+              -cpiCreateCustomerClientId $(cpiCreateCustomerClientId)
+              -cpiCreateCustomerClientSecret $(cpiCreateCustomerClientSecret)
+              -cpiCreateCustomerUrl $(cpiCreateCustomerUrl)
+              -cpiUpdateCustomerUrl $(cpiUpdateCustomerUrl)
+              -cpiAccessTokenUrl $(cpiAccessTokenUrl)
+              -apimManagedIdentityId $(apimManagedIdentityId)
+              -tokenValidationAudience $(tokenValidationAudience)
+              -customStorageName $(customStorageName)
+              -userAssignedManagedIdentityName $(userAssignedManagedIdentityName)'
+
+
+            deploymentMode: $(deploymentMode)
+            deploymentOutputs: 'deploymentOutputs'
+        
+        # create environment variables from deployment ouptputs
+        - task: PowerShell@2
+          name: 'SetDeploymentOutputVariables'
+          displayName: 'Set Deployment Output Variables'
+          inputs:
+            targetType: inline
+            script: |
+              $armOutputObj = '$(deploymentOutputs)' | ConvertFrom-Json
+              $armOutputObj.PSObject.Properties | ForEach-Object {
+                $keyname = $_.Name
+                $value = $_.Value.value
+
+                # Creates a standard pipeline variable
+                Write-Output "##vso[task.setvariable variable=$keyName;issecret=true]$value"
+
+                # Display keys in pipeline
+                Write-Output "output variable: $keyName"
+              }
+            pwsh: true
+
+        - task: AzureResourceGroupDeployment@3
+          displayName: 'Deploy Connectors'
+          inputs:
+            azureResourceManagerConnection: ${{ parameters.serviceConnection }}
+            resourceGroupName: $(resourceGroupName)
+            location: $(resourceGroupLocation)
+            csmFile: '$(Pipeline.Workspace)/$(artifactName)/Infrastructure/LogicApp/connectors.bicep'
+            # overrideParameters: '
+            #   -location $(resourceGroupLocation)
+            #   -commondataserviceName $(commondataserviceName)
+            #   -serviceBusResourceGroup $(serviceBusResourceGroup)
+            #   -serviceBusName $(serviceBusName)
+            #   -sharedServiceBusName $(sharedServiceBusName)              
+            #   -keyvaultName $(keyvaultName)              
+            #   -localKeyVaultName $(localKeyVaultName)
+            #   -dynamicsCrmClientId $(dynamicsClientId)
+            #   -dynamicsCrmSecret $(dynamicsSecret)
+            #   -dynamicsCrmDirectoryId $(dynamicsDirectoryId)
+            #   -logicAppSystemAssignedIdentityTenantId $(logicAppSystemAssignedIdentityTenantId)
+            #   -logicAppSystemAssignedIdentityObjectId $(logicAppSystemAssignedIdentityObjectId)'
+            overrideParameters: ''
+            deploymentMode: $(deploymentMode)
+            deploymentOutputs: 'deploymentOutputsConnectors'
+
+        # create environment variables from deployment ouptputs
+        - task: PowerShell@2
+          name: 'SetDeploymentOutputVariablesConnectors'
+          displayName: 'Set Deployment Output Variables for connectors'
+          inputs:
+            targetType: inline
+            script: |
+              $armOutputObj = '$(deploymentOutputsConnectors)' | ConvertFrom-Json
+              $armOutputObj.PSObject.Properties | ForEach-Object {
+                $keyname = $_.Name
+                $value = $_.Value.value
+
+                # Creates a standard pipeline variable
+                Write-Output "##vso[task.setvariable variable=$keyName;issecret=true]$value"
+
+                # Display keys in pipeline
+                Write-Output "output variable: $keyName"
+              }
+            pwsh: true
+
+        # - task: AzureCLI@2
+        #   displayName: 'Assign Managed Identity to Enterprise App Role'
+        #   inputs:
+        #     azureSubscription: ${{ parameters.serviceConnection }}
+        #     scriptType: 'bash'
+        #     scriptLocation: 'inlineScript'
+        #     inlineScript: |
+              
+        #       # Assign the app role using Microsoft Graph API
+        #       az rest --method post \
+        #         --uri "https://graph.microsoft.com/v1.0/servicePrincipals/$(tokenValidationEnterpriseAppObjectId)/appRoleAssignments" \
+        #         --headers 'Content-Type=application/json' \
+        #         --body "{
+        #           \"principalId\": \"$(logicAppSystemAssignedIdentityObjectId)\",
+        #           \"resourceId\": \"$(tokenValidationEnterpriseAppObjectId)\",
+        #           \"appRoleId\": \"$(tokenValidationCustomImportRoleObjectId)\"
+        #         }"
+
+        # # update vnetPrivatePortsCount
+        # - task: AzureCLI@2
+        #   inputs:
+        #     azureSubscription: ${{ parameters.serviceConnection }}
+        #     scriptType: 'bash'
+        #     scriptLocation: 'inlineScript'
+        #     inlineScript: |
+        #       az webapp config set -g $(resourceGroupName) -n $(LAname) --generic-configurations '{"vnetPrivatePortsCount": 2}'
+        #     addSpnToEnvironment: true
+        #     useGlobalConfig: true
+
+        # # update app settings
+        # - task: AzureCLI@2
+        #   inputs:
+        #     azureSubscription: ${{ parameters.serviceConnection }}
+        #     scriptType: 'bash'
+        #     scriptLocation: 'inlineScript'
+        #     inlineScript: |
+        #       az functionapp config appsettings set --name $(LAname) --resource-group  $(resourceGroupName) --settings WORKFLOWS_SERVICEBUS_CONNECTIONRUNTIME_URL=$(serviceBusConnectionRuntimeUrl) WORKFLOWS_KEYVAULT_CONNECTIONRUNTIME_URL=$(keyvaultConnectionRuntimeUrl) WORKFLOWS_COMMONDATASERVICE_CONNECTIONRUNTIME_URL=$(commondataserviceConnectionRuntimeUrl) WORKFLOWS_OFFICE365_CONNECTIONRUNTIME_URL=$(office365ConnectionRuntimeUrl)
+        #     #WORKFLOWS_AZURETABLES_CONNECTIONRUNTIME_URL=$(azuretablesConnectionRuntimeUrl) 
+        #     addSpnToEnvironment: true
+        #     useGlobalConfig: true

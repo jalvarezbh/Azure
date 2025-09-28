@@ -1,0 +1,68 @@
+trigger:
+  branches:
+    include:
+      - master
+  paths:
+    exclude:
+      - '*'
+    include:
+      - 'Functions/ru.core.integrations.customer.functions/*'
+      - 'Functions/ru.core.integrations.customer.core/*'
+
+
+pr: none
+
+variables:
+- name: vmImageName
+  value: ubuntu-latest
+- name: projects
+  value: '**/ru.core.integrations.customer.functions.csproj'
+- name: testProjects
+  value: '**/*tests.csproj'
+- name: buildConfiguration
+  value: 'Release'
+
+pool:
+  vmImage: $(vmImageName)
+
+stages:
+- stage: Builds
+  displayName: 'Build and test'
+  jobs:
+  - job: Build
+    steps:
+    - task: UseDotNet@2
+      displayName: "Use .NET Core sdk 9.x"
+      inputs:
+        version: 9.x
+
+    - task: DotNetCoreCLI@2
+      displayName: 'build'
+      inputs:
+        command: build
+        projects: $(projects)
+        arguments: '--configuration $(buildConfiguration)'
+        configuration: $(buildConfiguration)
+    
+    - task: DotNetCoreCLI@2
+      displayName: 'Test'
+      inputs:
+        command: test
+        projects: $(testProjects)
+        arguments: '--filter TestCategory!=Manual --configuration $(buildConfiguration)'
+    
+    - task: DotNetCoreCLI@2
+      displayName: 'Publish'
+      inputs:
+        command: publish
+        projects: $(projects)
+        configuration: $(buildConfiguration)
+        publishWebProjects: False
+        zipAfterPublish: True
+        arguments: '--output $(build.artifactstagingdirectory)'
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish artifact'
+      inputs:
+        PathtoPublish: '$(build.artifactstagingdirectory)'
+        ArtifactName: 'drop'

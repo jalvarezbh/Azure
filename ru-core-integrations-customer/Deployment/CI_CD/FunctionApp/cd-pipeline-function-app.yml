@@ -1,0 +1,50 @@
+resources:
+ pipelines:
+   - pipeline: 'cd-pipeline'
+     source: CI - ru-core-integrations-customer - function app
+     trigger: true
+
+trigger: none
+
+pr: none
+
+variables:
+- name: vmImageName
+  value: ubuntu-latest
+
+pool:
+  vmImage: $(vmImageName)
+
+stages:
+- stage: DEV
+  displayName: 'DEV'
+  variables:
+    - template: /Deployment/Variables/pipeline-vars-dev.yml
+
+  jobs:
+  - template: cd-template-function-app.yml
+    parameters:
+      serviceConnection: 'RU-Core-Dev'
+      devopsEnvironment: Development
+
+# - stage: TEST
+#   displayName: 'TEST'
+#   variables:
+#   - template: variables/pipeline-vars-test.yml
+
+#   jobs:
+#   - template: ../templates/cd-template-function.yml
+#     parameters:
+#       serviceConnection: 'NO-Core-Test'
+#       devopsEnvironment: Test
+
+# - stage: PROD
+#   displayName: 'PROD'
+#   variables:
+#     - template: variables/pipeline-vars-prod.yml
+
+#   jobs:
+#   - template: ../templates/cd-template-function.yml
+#     parameters:
+#       serviceConnection: 'NO-Core-Prod'
+#       devopsEnvironment: Production

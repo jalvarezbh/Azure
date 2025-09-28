@@ -1,0 +1,133 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "actions": {
+            "HTTP_-_get_environments": {
+                "type": "Http",
+                "inputs": {
+                    "uri": "@{parameters('FunctionAppBaseUrl')}GetActiveConfigurations",
+                    "method": "GET",
+                    "authentication": "@parameters('FunctionAppAuthentication')"
+                },
+                "runAfter": {},
+                "runtimeConfiguration": {
+                    "contentTransfer": {
+                        "transferMode": "Chunked"
+                    }
+                }
+            },
+            "For_each_environment": {
+                "type": "Foreach",
+                "foreach": "@body('HTTP_-_get_environments')",
+                "actions": {
+                    "Query_Entities_-_Failed": {
+                        "type": "ServiceProvider",
+                        "inputs": {
+                            "parameters": {
+                                "tableName": "InboundAccountsQueue",
+                                "filter": "Status eq 'Failed' and PartitionKey eq '@{items('For_each_environment')?['Name']}'"
+                            },
+                            "serviceProviderConfiguration": {
+                                "connectionName": "azureTables",
+                                "operationId": "queryEntities",
+                                "serviceProviderId": "/serviceProviders/azureTables"
+                            }
+                        }
+                    },
+                    "For_each_failed_entity": {
+                        "type": "Foreach",
+                        "foreach": "@body('Query_Entities_-_Failed')?['entities']",
+                        "actions": {
+                            "Condition_-_Should_abort": {
+                                "type": "If",
+                                "expression": {
+                                    "and": [
+                                        {
+                                            "greaterOrEquals": [
+                                                "@int(items('For_each_failed_entity')?['RetryCount'])",
+                                                5
+                                            ]
+                                        }
+                                    ]
+                                },
+                                "actions": {
+                                    "Update_Entity_-_abort": {
+                                        "type": "ServiceProvider",
+                                        "inputs": {
+                                            "parameters": {
+                                                "tableName": "InboundAccountsQueue",
+                                                "entity": {
+                                                    "PartitionKey": "@{items('For_each_failed_entity')?['PartitionKey']}",
+                                                    "RowKey": "@{items('For_each_failed_entity')?['RowKey']}",
+                                                    "Status": "Aborted",
+                                                    "NextRunTime": "@null"
+                                                },
+                                                "ifMatch": "@items('For_each_failed_entity')?['odata.etag']"
+                                            },
+                                            "serviceProviderConfiguration": {
+                                                "connectionName": "azureTables",
+                                                "operationId": "updateEntity",
+                                                "serviceProviderId": "/serviceProviders/azureTables"
+                                            }
+                                        }
+                                    }
+                                },
+                                "else": {
+                                    "actions": {
+                                        "Update_Entity_-_retry": {
+                                            "type": "ServiceProvider",
+                                            "inputs": {
+                                                "parameters": {
+                                                    "tableName": "InboundAccountsQueue",
+                                                    "entity": {
+                                                        "PartitionKey": "@{items('For_each_failed_entity')?['PartitionKey']}",
+                                                        "RowKey": "@{items('For_each_failed_entity')?['RowKey']}",
+                                                        "Status": "ReadyForRetry",
+                                                        "RetryCount": "@add(int(items('For_each_failed_entity')?['RetryCount']), 1)",
+                                                        "NextRunTime": "@addHours(utcNow(), 1)"
+                                                    }
+                                                },
+                                                "serviceProviderConfiguration": {
+                                                    "connectionName": "azureTables",
+                                                    "operationId": "updateEntity",
+                                                    "serviceProviderId": "/serviceProviders/azureTables"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "runAfter": {
+                            "Query_Entities_-_Failed": [
+                                "SUCCEEDED"
+                            ]
+                        }
+                    }
+                },
+                "runAfter": {
+                    "HTTP_-_get_environments": [
+                        "SUCCEEDED"
+                    ]
+                }
+            }
+        },
+        "outputs": {},
+        "triggers": {
+            "Recurrence": {
+                "type": "Recurrence",
+                "recurrence": {
+                    "interval": 3,
+                    "frequency": "Minute"
+                },
+                "runtimeConfiguration": {
+                    "concurrency": {
+                        "runs": 1
+                    }
+                }
+            }
+        }
+    },
+    "kind": "Stateful"
+}

@@ -1,0 +1,14 @@
+{
+  "FunctionAppBaseUrl": {
+    "type": "String",
+    "value": "@{appsetting('FunctionAppBaseUrl')}"
+  },
+   "FunctionAppAuthentication": {
+    "type": "Object",
+    "value": {
+      "type": "ManagedServiceIdentity",
+      "audience": "@{appsetting('tokenValidationAudience')}",
+      "identity": "@{appsetting('ManagedServiceIdentity')}"
+    }
+  }
+}

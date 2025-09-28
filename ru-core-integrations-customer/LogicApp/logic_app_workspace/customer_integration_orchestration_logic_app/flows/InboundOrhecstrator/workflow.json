@@ -1,0 +1,80 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "actions": {
+            "HTTP_-_Get_environments": {
+                "type": "Http",
+                "inputs": {
+                    "uri": "@{parameters('FunctionAppBaseUrl')}GetActiveConfigurations",
+                    "method": "GET",
+                    "authentication": "@parameters('FunctionAppAuthentication')"
+                },
+                "runAfter": {},
+                "runtimeConfiguration": {
+                    "contentTransfer": {
+                        "transferMode": "Chunked"
+                    }
+                }
+            },
+            "For_each_environment": {
+                "type": "Foreach",
+                "foreach": "@body('HTTP_-_Get_environments')",
+                "actions": {
+                    "HTTP_-_Get_batch_upsert_payload": {
+                        "type": "Http",
+                        "inputs": {
+                            "uri": "@{parameters('FunctionAppBaseUrl')}GetBatchUpdatePayload/@{items('For_each_environment')?['Id']}",
+                            "method": "GET",
+                            "authentication": "@parameters('FunctionAppAuthentication')"
+                        },
+                        "runtimeConfiguration": {
+                            "contentTransfer": {
+                                "transferMode": "Chunked"
+                            }
+                        }
+                    },
+                    "HTTP_-_Perform_batch_upsert": {
+                        "type": "Http",
+                        "inputs": {
+                            "uri": "@{parameters('FunctionAppBaseUrl')}PerformBatchUpdate",
+                            "method": "POST",
+                            "headers": {
+                                "RU-FLOW-RUN-ID": "@{workflow()['run']['name']}"
+                            },
+                            "body": "@body('HTTP_-_Get_batch_upsert_payload')",
+                            "authentication": "@parameters('FunctionAppAuthentication')"
+                        },
+                        "runAfter": {
+                            "HTTP_-_Get_batch_upsert_payload": [
+                                "SUCCEEDED"
+                            ]
+                        }
+                    }
+                },
+                "runAfter": {
+                    "HTTP_-_Get_environments": [
+                        "SUCCEEDED"
+                    ]
+                }
+            }
+        },
+        "outputs": {},
+        "triggers": {
+            "Recurrence": {
+                "type": "Recurrence",
+                "recurrence": {
+                    "interval": 1,
+                    "frequency": "Minute"
+                },
+                "runtimeConfiguration": {
+                    "concurrency": {
+                        "runs": 1,
+                        "maximumWaitingRuns": 10
+                    }
+                }
+            }
+        }
+    },
+    "kind": "Stateful"
+}

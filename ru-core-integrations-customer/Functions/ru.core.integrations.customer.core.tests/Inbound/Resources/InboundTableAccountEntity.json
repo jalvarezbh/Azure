@@ -1,0 +1,17 @@
+﻿{
+  "CustomerId": "CUST1011",
+  "CustomerName": "Customer 1010",
+  "Base64Data": "eyJDdXN0b21lcklkIjoiQ1VTVDEwMTEiLCJTYWxlc09yZyI6IjIwNTciLCJDdXN0b21lck5hbWUiOiJDdXN0b21lciAxMDEwIiwiQ3VzdG9tZXJFbWFpbCI6ImN1c3RvbWVyMTAwQGV4YW1wbGUuY29tIiwiQ3VzdG9tZXJQaG9uZSI6IjU1NS0wMTAxMDAiLCJDdXN0b21lckFkZHJlc3MiOiJBZGRyZXNzIDEwMCIsIkNyZWF0ZWRBdCI6IjIwMjUtMDctMjVUMTI6MDA6MDArMDA6MDAiLCJVcGRhdGVkQXQiOiIyMDI1LTA3LTI1VDEyOjAwOjAwKzAwOjAwIn0=",
+  "Hash": "e8de874290a109b4a26a83d64d35224118087c65a7359d88073e9445eb36d016",
+  "RetryCount": 0,
+  "Status": "Ready",
+  "PartitionKey": "Norway",
+  "RowKey": "CUST1011",
+  "Timestamp": null,
+  "NextRunTime": "2025-08-15T10:41:04.4352303+00:00",
+  "QueuedTimestamp": "2025-08-15T10:41:04.4353279+00:00",
+  "ETag": null,
+  "ServiceBusMessageId": "4fc36ddc79694f56bf91d214954d9adf",
+  "InboundMessageBusOrchestratorFlowRunId": "DummyFromPostman",
+  "InboundOrchestratorFlowRunId": "Dummy"
+}

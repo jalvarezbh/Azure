@@ -1,0 +1,58 @@
+trigger:
+- main
+
+pr: none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+- template: /Deployment/Variables/pipeline-vars-shared.yml
+
+jobs:
+- job: logic_app_build
+  displayName: 'Build and publish logic app'
+  
+  steps:
+
+  - task: CopyFiles@2
+    displayName: 'Copy logic app flows to project output'
+    inputs:
+      SourceFolder: '$(System.DefaultWorkingDirectory)/LogicApp/logic_app_workspace/customer_integration_orchestration_logic_app/flows'
+      Contents: |
+        **
+        !workflow-designtime/**
+        !.funcignore
+        !*.json
+      TargetFolder: 'project_output/LogicApp'
+
+  
+  - task: CopyFiles@2
+    displayName: 'Copy logic app cloud folder to project output'
+    inputs:
+      SourceFolder: '$(System.DefaultWorkingDirectory)/LogicApp/logic_app_workspace/customer_integration_orchestration_logic_app/cloud'
+      Contents: '**'
+      TargetFolder: 'project_output/LogicApp'
+
+  - task: CopyFiles@2
+    displayName: 'Copy logic app flows to staging area'
+    inputs:
+      SourceFolder: "$(System.DefaultWorkingDirectory)/project_output/LogicApp"
+      TargetFolder: "$(Build.ArtifactStagingDirectory)"
+      Contents: '**'
+
+  - task: ArchiveFiles@2
+    displayName: 'Append function app to archive'
+    inputs:
+      rootFolderOrFile: '$(Build.ArtifactStagingDirectory)'
+      includeRootFolder: false
+      archiveType: 'zip'
+      archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+      replaceExistingArchive: true
+
+  - task: PublishPipelineArtifact@1
+    displayName: 'Publish project zip artifact'
+    inputs:
+      targetPath: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+      artifact: '$(logicAppCIArtifactName)'
+      publishLocation: 'pipeline'

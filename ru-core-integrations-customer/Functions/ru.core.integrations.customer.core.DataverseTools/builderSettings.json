@@ -1,0 +1,15 @@
+﻿{
+  "suppressINotifyPattern": true,
+  "suppressGeneratedCodeAttribute": false,
+  "language": "CS",
+  "generateSdkMessages": false,
+  "generateGlobalOptionSets": false,
+  "emitFieldsClasses": false,
+  "entityTypesFolder": "Entities",
+  "messagesTypesFolder": "Messages",
+  "optionSetsTypesFolder": "OptionSets",
+  "emitEntityETC": false,
+  "emitVirtualAttributes": false,
+  "namespace": "ru.core.integrations.customer.core.Model.Dataverse",
+  "serviceContextName":  "DataverseContext"
+}

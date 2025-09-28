@@ -1,0 +1,346 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "languageVersion": "2.0",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.36.177.2456",
+      "templateHash": "17420848814472617795"
+    }
+  },
+  "parameters": {
+    "environmentName": {
+      "type": "string"
+    },
+    "apimManagedIdentityId": {
+      "type": "string"
+    },
+    "appInsightsName": {
+      "type": "string"
+    },
+    "dataverseObjectId": {
+      "type": "string"
+    },
+    "localKeyVaultName": {
+      "type": "string"
+    },
+    "customStorageName": {
+      "type": "string"
+    },
+    "storageAccountType": {
+      "type": "string",
+      "defaultValue": "Standard_LRS"
+    },
+    "graphAudience": {
+      "type": "string"
+    },
+    "graphAuthority": {
+      "type": "string"
+    },
+    "graphClientId": {
+      "type": "string"
+    },
+    "graphClientSecret": {
+      "type": "securestring"
+    },
+    "graphTenant": {
+      "type": "string"
+    },
+    "serviceBusNamespaceName": {
+      "type": "string"
+    },
+    "serviceBusQueueName": {
+      "type": "string"
+    },
+    "sharedResourceGroupName": {
+      "type": "string"
+    }
+  },
+  "variables": {
+    "ResourceGroup": "[resourceGroup().location]",
+    "customStorageAccountid": "[format('{0}/providers/Microsoft.Storage/storageAccounts/{1}', resourceGroup().id, parameters('customStorageName'))]",
+    "endpointSuffix": ";EndpointSuffix=core.windows.net",
+    "sa_name": "sa",
+    "storageName": "[concat(toLower(variables('sa_name')), uniqueString(resourceGroup().id))]"
+  },
+  "resources": {
+    "storageAccount": {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2018-07-01",
+      "name": "[variables('storageName')]",
+      "location": "[variables('ResourceGroup')]",
+      "kind": "StorageV2",
+      "sku": {
+        "name": "[parameters('storageAccountType')]"
+      },
+      "properties": {}
+    },
+    "storageAccountCustom": {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2018-07-01",
+      "name": "[parameters('customStorageName')]",
+      "location": "[variables('ResourceGroup')]",
+      "kind": "StorageV2",
+      "sku": {
+        "name": "[parameters('storageAccountType')]"
+      },
+      "properties": {}
+    },
+    "storageaccountCustom_tableService": {
+      "type": "Microsoft.Storage/storageAccounts/tableServices",
+      "apiVersion": "2021-08-01",
+      "name": "[format('{0}/{1}', parameters('customStorageName'), 'default')]",
+      "dependsOn": [
+        "storageAccountCustom"
+      ]
+    },
+    "storageaccountCustom_tableService_HashesTable": {
+      "type": "Microsoft.Storage/storageAccounts/tableServices/tables",
+      "apiVersion": "2021-08-01",
+      "name": "[format('{0}/{1}/{2}', parameters('customStorageName'), 'default', 'Hashes')]",
+      "dependsOn": [
+        "storageaccountCustom_tableService"
+      ]
+    },
+    "storageaccountCustom_tableService_table_product_transaction_log": {
+      "type": "Microsoft.Storage/storageAccounts/tableServices/tables",
+      "apiVersion": "2021-08-01",
+      "name": "[format('{0}/{1}/{2}', parameters('customStorageName'), 'default', 'InboundAccountTransactionLog')]",
+      "dependsOn": [
+        "storageaccountCustom_tableService"
+      ]
+    },
+    "storageaccount_tableService_table_inbound_products_queue": {
+      "type": "Microsoft.Storage/storageAccounts/tableServices/tables",
+      "apiVersion": "2021-08-01",
+      "name": "[format('{0}/{1}/{2}', parameters('customStorageName'), 'default', 'InboundAccountsQueue')]",
+      "dependsOn": [
+        "storageaccountCustom_tableService"
+      ]
+    },
+    "appInsights": {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2014-04-01",
+      "name": "[parameters('appInsightsName')]",
+      "location": "[variables('ResourceGroup')]",
+      "properties": {
+        "applicationId": "[parameters('appInsightsName')]"
+      }
+    },
+    "kv": {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2021-11-01-preview",
+      "name": "[parameters('localKeyVaultName')]",
+      "location": "[variables('ResourceGroup')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]"
+      },
+      "properties": {
+        "enabledForDeployment": false,
+        "enabledForDiskEncryption": false,
+        "enabledForTemplateDeployment": false,
+        "tenantId": "[subscription().tenantId]",
+        "enableSoftDelete": true,
+        "softDeleteRetentionInDays": 90,
+        "enableRbacAuthorization": true,
+        "sku": {
+          "name": "standard",
+          "family": "A"
+        },
+        "networkAcls": {
+          "defaultAction": "Allow",
+          "bypass": "AzureServices"
+        }
+      }
+    },
+    "serviceBusConnectionStringSecret": {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2021-11-01-preview",
+      "name": "[format('{0}/{1}', parameters('localKeyVaultName'), 'ServiceBusConnectionString')]",
+      "properties": {
+        "value": "[listOutputsWithSecureValues('serviceBusModule', '2022-09-01').serviceBusConnectionString]"
+      },
+      "dependsOn": [
+        "kv",
+        "serviceBusModule"
+      ]
+    },
+    "customStorageTableConnectionStringSecret": {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2021-11-01-preview",
+      "name": "[format('{0}/{1}', parameters('localKeyVaultName'), 'CustomStorageTableConnectionString')]",
+      "properties": {
+        "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1}{2}', parameters('customStorageName'), listKeys(variables('customStorageAccountid'), '2015-05-01-preview').key1, variables('endpointSuffix'))]"
+      },
+      "dependsOn": [
+        "kv"
+      ]
+    },
+    "graphAudienceSecret": {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2021-11-01-preview",
+      "name": "[format('{0}/{1}', parameters('localKeyVaultName'), 'GraphAudience')]",
+      "properties": {
+        "value": "[parameters('graphAudience')]"
+      },
+      "dependsOn": [
+        "kv"
+      ]
+    },
+    "graphAuthoritySecret": {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2021-11-01-preview",
+      "name": "[format('{0}/{1}', parameters('localKeyVaultName'), 'GraphAuthority')]",
+      "properties": {
+        "value": "[parameters('graphAuthority')]"
+      },
+      "dependsOn": [
+        "kv"
+      ]
+    },
+    "graphClientIdSecret": {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2021-11-01-preview",
+      "name": "[format('{0}/{1}', parameters('localKeyVaultName'), 'GraphClientId')]",
+      "properties": {
+        "value": "[parameters('graphClientId')]"
+      },
+      "dependsOn": [
+        "kv"
+      ]
+    },
+    "graphClientSecretSecret": {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2021-11-01-preview",
+      "name": "[format('{0}/{1}', parameters('localKeyVaultName'), 'GraphClientSecret')]",
+      "properties": {
+        "value": "[parameters('graphClientSecret')]"
+      },
+      "dependsOn": [
+        "kv"
+      ]
+    },
+    "graphTenantSecret": {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2021-11-01-preview",
+      "name": "[format('{0}/{1}', parameters('localKeyVaultName'), 'GraphTenant')]",
+      "properties": {
+        "value": "[parameters('graphTenant')]"
+      },
+      "dependsOn": [
+        "kv"
+      ]
+    },
+    "keyVaultSecretUserRoleRoleDefinition": {
+      "existing": true,
+      "type": "Microsoft.Authorization/roleDefinitions",
+      "apiVersion": "2018-01-01-preview",
+      "subscriptionId": "[subscription().subscriptionId]",
+      "name": "4633458b-17de-408a-b874-0445c86b69e6",
+      "metadata": {
+        "description": "This is the built-in Key Vault Secret User role. See https://docs.microsoft.com/azure/role-based-access-control/built-in-roles#key-vault-secrets-user"
+      }
+    },
+    "keyVaultSecretUserRoleAssignmentDataverse": {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2020-08-01-preview",
+      "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('localKeyVaultName'))]",
+      "name": "[guid(resourceGroup().id, parameters('dataverseObjectId'), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6'))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
+        "principalId": "[parameters('dataverseObjectId')]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "kv"
+      ]
+    },
+    "keyVaultSecretUserRoleAssignmentApimManagedIdentity": {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2020-08-01-preview",
+      "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('localKeyVaultName'))]",
+      "name": "[guid(resourceGroup().id, parameters('apimManagedIdentityId'), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6'))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
+        "principalId": "[parameters('apimManagedIdentityId')]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "kv"
+      ]
+    },
+    "serviceBusModule": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "serviceBusModule",
+      "resourceGroup": "[parameters('sharedResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "serviceBusNamespaceName": {
+            "value": "[parameters('serviceBusNamespaceName')]"
+          },
+          "serviceBusQueueName": {
+            "value": "[parameters('serviceBusQueueName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "languageVersion": "2.0",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.177.2456",
+              "templateHash": "1704900080834907252"
+            }
+          },
+          "parameters": {
+            "serviceBusNamespaceName": {
+              "type": "string"
+            },
+            "serviceBusQueueName": {
+              "type": "string"
+            }
+          },
+          "resources": {
+            "serviceBusNamespace": {
+              "existing": true,
+              "type": "Microsoft.ServiceBus/namespaces",
+              "apiVersion": "2022-10-01-preview",
+              "name": "[parameters('serviceBusNamespaceName')]"
+            },
+            "serviceBusQueue": {
+              "type": "Microsoft.ServiceBus/namespaces/queues",
+              "apiVersion": "2022-10-01-preview",
+              "name": "[format('{0}/{1}', parameters('serviceBusNamespaceName'), parameters('serviceBusQueueName'))]"
+            },
+            "serviceBusQueueAuthRule": {
+              "type": "Microsoft.ServiceBus/namespaces/queues/authorizationRules",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}/{2}', parameters('serviceBusNamespaceName'), parameters('serviceBusQueueName'), 'ReadOnly')]",
+              "properties": {
+                "rights": [
+                  "Listen"
+                ]
+              },
+              "dependsOn": [
+                "serviceBusQueue"
+              ]
+            }
+          },
+          "outputs": {
+            "serviceBusConnectionString": {
+              "type": "securestring",
+              "value": "[listKeys('serviceBusQueueAuthRule', '2024-01-01').primaryConnectionString]"
+            }
+          }
+        }
+      }
+    }
+  }
+}

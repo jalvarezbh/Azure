@@ -1,0 +1,41 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "actions": {
+            "HTTP_-_Process_incoming_messages": {
+                "type": "Http",
+                "inputs": {
+                    "uri": "@{parameters('FunctionAppBaseUrl')}ProcessIncomingMessages",
+                    "method": "GET",
+                    "headers": {
+                        "RU-FLOW-RUN-ID": "@{workflow()['run']['name']}"
+                    },
+                    "authentication": "@parameters('FunctionAppAuthentication')"
+                },
+                "runAfter": {},
+                "runtimeConfiguration": {
+                    "contentTransfer": {
+                        "transferMode": "Chunked"
+                    }
+                }
+            }
+        },
+        "outputs": {},
+        "triggers": {
+            "Recurrence": {
+                "type": "Recurrence",
+                "recurrence": {
+                    "interval": 1,
+                    "frequency": "Minute"
+                },
+                "runtimeConfiguration": {
+                    "concurrency": {
+                        "runs": 1
+                    }
+                }
+            }
+        }
+    },
+    "kind": "Stateful"
+}

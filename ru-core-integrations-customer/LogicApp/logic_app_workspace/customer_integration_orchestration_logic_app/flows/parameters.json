@@ -1,0 +1,13 @@
+{
+  "FunctionAppBaseUrl": {
+    "type": "String",
+    "value": "@{appsetting('FunctionAppBaseUrl')}"
+  },
+  "FunctionAppAuthentication": {
+    "type": "Raw"
+  },
+  "test": {
+    "type": "String",
+    "value": "test"
+  }
+}

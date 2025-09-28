@@ -1,0 +1,101 @@
+﻿trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+name: 1.0$(Rev:.r)
+
+variables:
+  buildConfiguration: 'Release'
+  buildPlatform: 'Any CPU'
+  soloution: '**/*.sln'
+  nugetProject: '**/ru.core.integrations.shared.csproj'
+  testProject: '**/*tests.csproj'
+  versionNumber: '1.0.$(Rev:r)'
+  fileVersion: '$(Build.BuildNumber)'
+  assemblyVersion: '$(Build.BuildNumber)'
+
+stages:
+- stage: BuildAndTest
+  displayName: 'Build and pack NuGet package'
+  jobs:
+  - job: BuildAndTestJob
+    displayName: 'Build and test job'
+    steps:
+    - task: UseDotNet@2
+      displayName: "Use .NET Core sdk 9.x"
+      inputs:
+        version: 9.x
+
+    - task: DotNetCoreCLI@2
+      displayName: 'restore'
+      inputs:
+        command: restore
+        projects: $(soloution)
+        arguments: ''
+        configuration: $(buildConfiguration)
+    
+    - task: DotNetCoreCLI@2
+      displayName: 'build'
+      inputs:
+        command: build
+        projects: $(soloution)
+        arguments: ''
+        configuration: $(buildConfiguration)
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Test'
+      inputs:
+        command: test
+        projects: $(testProject)
+        arguments: '--filter TestCategory!=Manual --configuration $(buildConfiguration)'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Pack NuGet Package'
+      inputs:
+        command: 'pack'
+        projects: '$(nugetProject)'
+        arguments: >
+            '--configuration $(buildConfiguration) 
+            --output $(Build.ArtifactStagingDirectory)
+            /p:AssemblyVersion=$(AssemblyVersion)
+            /p:FileVersion=$(FileVersion)'
+        versioningScheme: 'byBuildNumber'
+        majorVersion: '1'
+        minorVersion: '0'
+
+
+    - publish: $(Build.ArtifactStagingDirectory)
+      artifact: drop
+      displayName: 'Publish Build Artifacts'
+
+- stage: PushToArtifacts
+  displayName: 'Push NuGet Package to Azure Artifacts'
+  dependsOn: BuildAndTest
+  condition: succeeded()
+  jobs:
+  - deployment: DeployApp
+    displayName: 'Deploy NuGet package'
+    environment: Production
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: drop
+            displayName: 'Download artifact'
+
+          - task: NuGetToolInstaller@1
+            displayName: 'Install NuGet Tool'
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Push NuGet Package'
+            inputs:
+              command: 'push'
+              packagesToPush: '$(Pipeline.Workspace)/**/*.nupkg'
+              nuGetFeedType: 'internal' # Use 'internal' for Azure Artifacts feeds
+              publishVstsFeed: 'Customer Insights and Solutions/Customer-Insights-And-Solutions-Nuget-Feed' # Replace with the name of your Azure Artifacts feed
+              # For project-scoped feeds, use 'YourProjectName/YourFeedName'

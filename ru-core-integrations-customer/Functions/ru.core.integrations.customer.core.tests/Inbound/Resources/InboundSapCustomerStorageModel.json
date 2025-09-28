@@ -1,0 +1,19 @@
+﻿{
+  "Model": {
+    "SalesOrg":  "2057",
+    "CustomerId": "CUST1011",
+    "CustomerName": "Customer 1010",
+    "CustomerEmail": "customer100@example.com",
+    "CustomerPhone": "555-010100",
+    "CustomerAddress": "Address 100",
+    "CreatedAt": "2025-07-25T12:00:00+00:00",
+    "UpdatedAt": "2025-07-25T12:00:00+00:00"
+  },
+  "QueuedTimestamp": "2025-08-15T10:41:04.4353279+00:00",
+  "ETag": null,
+  "Status": 1,
+  "NextRunTime": "2025-08-15T10:41:04.4352303+00:00",
+  "ServiceBusMessageId": "4fc36ddc79694f56bf91d214954d9adf",
+  "InboundMessageBusOrchestratorFlowRunId": "DummyFromPostman",
+  "InboundOrchestratorFlowRunId": "Dummy"
+}

@@ -1,0 +1,49 @@
+# 
+
+variables:
+  - group: Core-Integration-Customer-Dev
+
+  - name: laAppServicePlanName
+    value: 'asp-la-ru-core-dev-core-integrations'
+
+  - name: faAppServicePlanName
+    value: 'asp-ru-core-dev-core-integrations'
+
+  - name: prefix
+    value: 'ru-core-dev'
+
+  - name: projectName
+    value: 'integrations-customer'
+
+  - name: appInsightsName
+    value: 'ai-$(prefix)-$(projectName)'
+  
+  - name: resourceGroupName
+    value: 'rg-$(prefix)-$(projectName)'
+
+  - name: resourceGroupLocation
+    value: 'northeurope'
+
+  - name: customStorageName
+    value: 'sarucustintdev'
+  
+  - name: localKeyVaultName
+    value: 'kv-ru-dev-customer-int'
+
+  - name: functionAppName
+    value: 'fa-$(prefix)-$(projectName)'
+
+  - name: logicAppName
+    value: 'la-$(prefix)-$(projectName)'
+
+  - name: sharedResourceGroup
+    value: 'rg-ru-core-dev-shared'
+
+  - name: serviceBusName
+    value: 'sb-ru-core-dev'
+
+  - name: serviceBusQueueName
+    value: 'core-customer-integration'
+
+  - name: inboundCustomerTableName
+    value: 'InboundAccountsQueue'

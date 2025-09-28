@@ -1,0 +1,41 @@
+trigger: none
+
+pr: none
+
+variables:
+- name: vmImageName
+  value: ubuntu-latest
+- name: artifactName
+  value: iac_deploy_artifacts_fa
+- name: deploymentMode 
+  value: 'Incremental'
+
+
+pool:
+  vmImage: $(vmImageName)
+
+stages:
+  - stage: PublishIACArtifact
+    displayName: 'Publish IaC Artifacts'
+    jobs:
+    - job: buildArtifact
+      steps:
+      - task: CopyFiles@2
+        displayName: 'Copy ARM template(s)'
+        inputs:
+          sourceFolder: 'Deployment'
+          targetFolder: '$(Build.ArtifactStagingDirectory)'
+
+      - publish: '$(Build.ArtifactStagingDirectory)'
+        artifact: $(artifactName)
+
+  - stage: DEV
+    displayName: 'DEV IAC'
+    variables:
+    - template: ../../Variables/pipeline-vars-dev.yml
+
+    jobs:
+    - template: iac-template-functionapp.yml
+      parameters:
+        serviceConnection: 'RU-Core-Dev'
+        devopsEnvironment: Development

@@ -1,0 +1,18 @@
+{
+  "managedApiConnections": {},
+  "serviceProviderConnections": {
+    "azureTables": {
+      "displayName": "CustomTableStorage",
+      "parameterSetName": "ManagedServiceIdentity",
+      "parameterValues": {
+        "authProvider": {
+          "Type": "ManagedServiceIdentity"
+        },
+        "tableStorageEndpoint": "@appsetting('CustomTableStorageUrl')"
+      },
+      "serviceProvider": {
+        "id": "/serviceProviders/azureTables"
+      }
+    }
+  }
+}

@@ -1,0 +1,51 @@
+# IaC Logic App resources deployment template
+
+parameters:
+- name: environment
+  type: string
+- name: serviceConnection
+  type: string
+
+jobs:
+- deployment: deploy_shared_resources
+  displayName: Deploy shared Resources
+  pool:
+    vmImage: ubuntu-latest
+  environment: ${{ parameters.environment }}
+  variables:
+    deploymentMode: 'Incremental'
+  strategy:
+    runOnce:
+      deploy:
+        steps:
+        - download: current
+          artifact: $(artifactName)
+
+        - task: AzureResourceGroupDeployment@3
+          name: AzureDeploy
+          displayName: 'Execute bicep template'
+          inputs:
+            azureResourceManagerConnection: ${{ parameters.serviceConnection }}
+            resourceGroupName: $(resourceGroupName)
+            action: 'Create Or Update Resource Group'
+            location: $(resourceGroupLocation)
+            csmFile: '$(Pipeline.Workspace)/$(artifactName)/shared-resources.bicep'
+            overrideParameters: '
+              -environmentName ${{ parameters.environment }}
+              -appInsightsName $(appInsightsName)
+              -localKeyVaultName $(localKeyVaultName)
+              -customStorageName $(customStorageName)
+              -dataverseObjectId $(DataverseObjectId)
+              -apimManagedIdentityId $(ApimManagedIdentityId)
+              -graphAudience $(graphAudience)
+              -graphAuthority $(graphAuthority)
+              -graphClientId $(graphClientId)
+              -graphClientSecret $(graphClientSecret)
+              -graphTenant $(graphTenant)
+              -serviceBusNamespaceName $(serviceBusNamespaceName)
+              -serviceBusQueueName $(serviceBusQueueName)
+              -serviceBusQueueNameOutbound $(serviceBusQueueNameOutbound)
+              -sharedResourceGroupName $(sharedResourceGroup)
+              -userAssignedManagedIdentityName $(userAssignedManagedIdentityName)'
+            deploymentMode: $(deploymentMode)
+            deploymentOutputs: 'deploymentOutputs'
